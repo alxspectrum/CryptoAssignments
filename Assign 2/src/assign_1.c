@@ -177,18 +177,12 @@ keygen(unsigned char *password, int pass_len, int bit_mode)
 	if (!EVP_Digest (password, pass_len , key, NULL, EVP_sha1(), NULL)) exitError();
 
 	/* PAD THE KEY */
-	/* PAD THE KEY */
-	/* PAD THE KEY */
-	/* PAD THE KEY */
-	/* PAD THE KEY */
-	/* PAD THE KEY */
-	/* PAD THE KEY */
 	if (bit_mode == 256) {
 		for (int i = 20; i < SHA_DIGEST_LENGTH; ++i) {
 			key[i] = 0;
 		}
 	}
-	print_hex(key, SHA_DIGEST_LENGTH);
+
 	printInfo("Key generated!");
 	return key;
 }
@@ -359,8 +353,6 @@ verify_cmac(unsigned char *cmac1, unsigned char *cmac2)
 {
 	int verify = 0;
 
-	// print_hex(cmac1,CMAC_SIZE);
-	// print_hex(cmac2,CMAC_SIZE);
 	verify = strcmp((char*)cmac1,(char*)cmac2) == 0 ? 1 : 0;
 
 	return verify;
@@ -451,6 +443,7 @@ main(int argc, char **argv)
 	unsigned char *ciphertext = NULL;
 	unsigned char *key = NULL;		/* key derived from kdf */
 	unsigned char *iv = NULL;		/* */
+	unsigned char *cmac = NULL;
 
 	int pass_len;            /* password length */
 	int plaintext_len;  	 /* length of plaintext */
@@ -474,17 +467,16 @@ main(int argc, char **argv)
 	/* Encryption */
 	if (op_mode == 0) {
 		printTask("Task B");
-		if (!(fp = fopen(input_file,"r"))) exitError();
+		if (!(fp = fopen(input_file,"r"))) goto err;
 		
 		/* Get length of the plaintext */
-		if (fseek(fp, 0, SEEK_END)) exitError();
+		if (fseek(fp, 0, SEEK_END)) goto err;
 		fsize = ftell(fp);
-		if (fseek(fp, 0, SEEK_SET)) exitError();
-		// fsize += 1;
+		if (fseek(fp, 0, SEEK_SET)) goto err;
 
 		/* Read plaintext from file */
 		plaintext = malloc(fsize * sizeof(char));
-		if (!(fread(plaintext, 1, fsize, fp))) exitError();
+		if (!(fread(plaintext, 1, fsize, fp))) goto err;
 		fclose(fp);
 
 		plaintext_len = fsize;
@@ -496,8 +488,8 @@ main(int argc, char **argv)
 		ciphertext = encrypt(plaintext, plaintext_len, key, iv, bit_mode);		
 		
 		/* Write the ciphertext to output file */
-		if (!(fp = fopen(output_file,"w"))) exitError();
-		if (!fwrite(ciphertext, 1, ciphertext_len, fp)) exitError();
+		if (!(fp = fopen(output_file,"w"))) goto err;
+		if (!fwrite(ciphertext, 1, ciphertext_len, fp)) goto err;
 		
 		/* Clean up */
 		fclose(fp);
@@ -508,16 +500,16 @@ main(int argc, char **argv)
 	/* Decryption */
 	if (op_mode == 1) {
 		printTask("Task C");
-		if (!(fp = fopen(input_file,"r"))) exitError();
+		if (!(fp = fopen(input_file,"r"))) goto err;
 		
 		/* Get ciphertext size */
-		if (fseek(fp, 0, SEEK_END)) exitError();
+		if (fseek(fp, 0, SEEK_END)) goto err;
 		fsize = ftell(fp);
-		if (fseek(fp, 0, SEEK_SET)) exitError();
+		if (fseek(fp, 0, SEEK_SET)) goto err;
 
 		/* Allocate memory and read ciphertext */
 		ciphertext = malloc((fsize + BLOCK_SIZE) * sizeof(char));
-		if (!(fread(ciphertext, 1, fsize, fp))) exitError();
+		if (!(fread(ciphertext, 1, fsize, fp))) goto err;
 		fclose(fp);
 
 		/* Get plaintext length - Should be multiple of blocksize */
@@ -528,31 +520,30 @@ main(int argc, char **argv)
 		plaintext_len = strlen((char*)plaintext);
 
 		/* Write decrypted text to file */
-		if (!(fp = fopen(output_file,"w"))) exitError();
-		if (!fwrite(plaintext, 1, plaintext_len, fp)) exitError();
+		if (!(fp = fopen(output_file,"w"))) goto err;
+		if (!fwrite(plaintext, 1, plaintext_len, fp)) goto err;
 		
 		/* Free */
 		fclose(fp);
 		free(plaintext); 
 		free(ciphertext);
-
+		return;
 	}
 
 	/* Sign */
 	if (op_mode == 2) {
 		printTask("Task D");
 		
-		unsigned char *cmac = NULL;
-		if (!(fp = fopen(input_file,"r"))) exitError();
+		if (!(fp = fopen(input_file,"r"))) goto err;
 
 		/* Get length of plaintext */
-		if (fseek(fp, 0, SEEK_END)) exitError();
+		if (fseek(fp, 0, SEEK_END)) goto err;
 		fsize = ftell(fp);
-		if (fseek(fp, 0, SEEK_SET)) exitError();
+		if (fseek(fp, 0, SEEK_SET)) goto err;
 
 		/* Read plaintext from file */
 		plaintext = malloc(fsize * sizeof(char));
-		if (!(fread(plaintext, 1, fsize, fp))) exitError();
+		if (!(fread(plaintext, 1, fsize, fp))) goto err;
 		fclose(fp);
 
 		/* Get ciphertext length */
@@ -565,10 +556,10 @@ main(int argc, char **argv)
 		cmac = gen_cmac(plaintext, plaintext_len, key, bit_mode);
 
 		/* Concatenate CMAC to ciphertext */
-		if (!(fp = fopen(output_file,"w"))) exitError();
-		if (!fwrite(ciphertext, 1, ciphertext_len, fp)) exitError();
-		if (fseek(fp, 0, SEEK_END)) exitError();
-		if (!fwrite(cmac, 1, CMAC_SIZE, fp)) exitError();
+		if (!(fp = fopen(output_file,"w"))) goto err;
+		if (!fwrite(ciphertext, 1, ciphertext_len, fp)) goto err;
+		if (fseek(fp, 0, SEEK_END)) goto err;
+		if (!fwrite(cmac, 1, CMAC_SIZE, fp)) goto err;
 		fclose(fp);
 		
 		/* Clean up */
@@ -627,15 +618,6 @@ main(int argc, char **argv)
 		free(cmac);
 		free(ciphertext);
 		free(plaintext);
-		return;
-
-		/* Handle errors */
-		err: 
-			free(cmac);
-			free(ciphertext);
-			free(plaintext);
-			fclose(fp);
-			exitError();
 	}		
 
 	/* Clean up */
@@ -646,4 +628,12 @@ main(int argc, char **argv)
 
 	/* END */
 	return 0;
+
+	/* Handle errors */
+	err:
+		fclose(fp);
+		free(cmac);
+		free(ciphertext);
+		free(plaintext);
+		exitError();
 }
