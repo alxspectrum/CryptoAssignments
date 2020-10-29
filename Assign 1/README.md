@@ -89,5 +89,5 @@ unsigned char* vigenere_crypto(unsigned char* msg, unsigned char* key, bool enc_
 * ```hexToChar()```: Convert an array with hex values to string
 * ```cleanText()```: Strips a string of characters not in [a-zA-Z0-9]
 * ```setAlphabet()```: Set the alphabet for caesar's cipher
-* ```vigeDecFindCol()```: On vigener's cipher, find decryption char' column index
+* ```vigeDecFindCol()```: On vigener's cipher, find decryption char' column index.
 
