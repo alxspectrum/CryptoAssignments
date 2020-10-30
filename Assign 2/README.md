@@ -12,7 +12,7 @@ Encryption and decryption is available for bit modes 128 and 256.
 
 ### !Disclaimer 
 This software is for auditing purposes only as it has not 
-been tested on many different scenarios and security breaches. 
+been tested on many different scenarios and security vulnerabilities. 
 Cryptographic software demands high levels of expertise and 
 security optimization for production. 
 
