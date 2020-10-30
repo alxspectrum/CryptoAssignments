@@ -444,6 +444,7 @@ main(int argc, char **argv)
 	unsigned char *key = NULL;		/* key derived from kdf */
 	unsigned char *iv = NULL;		/* */
 	unsigned char *cmac = NULL;
+	unsigned char *cmac_of_plaintext = NULL;
 
 	int pass_len;            /* password length */
 	int plaintext_len;  	 /* length of plaintext */
@@ -451,7 +452,7 @@ main(int argc, char **argv)
 	long fsize = 0;     /* Size of data in file */
 
 	/* Key generation */
-	printf("\n");
+	printInfo("################ EVP OPERATIONS ################");
 	printTask("Task A");
 
 	pass_len = strlen((char*)password);
@@ -527,7 +528,6 @@ main(int argc, char **argv)
 		fclose(fp);
 		free(plaintext); 
 		free(ciphertext);
-		return;
 	}
 
 	/* Sign */
@@ -572,9 +572,6 @@ main(int argc, char **argv)
 	if (op_mode == 3) {
 		printTask("Task E");
 		
-		unsigned char *cmac = NULL;
-		unsigned char *cmac_of_plaintext = NULL;
-
 		plaintext = NULL;
 		if(!(fp = fopen(input_file,"r"))) goto err;
 
@@ -621,12 +618,12 @@ main(int argc, char **argv)
 	}		
 
 	/* Clean up */
-	printf("\n");
 	free(input_file);
 	free(output_file);
 	free(password);
 
 	/* END */
+	printInfo("################ SUCCESS ################");
 	return 0;
 
 	/* Handle errors */
