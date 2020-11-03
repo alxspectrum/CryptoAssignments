@@ -123,9 +123,17 @@ size_t
 choose_e(size_t fi_n)
 {
 	size_t e;
+	int primes_sz;
+	size_t	*primes = sieve_of_eratosthenes(fi_n, &primes_sz);
 
-	/* TODO */
-
+	for (int i = 0; i < primes_sz; ++i) {
+		e = primes[i];
+		if ((e % fi_n != 0) && (gcd(e,fi_n) == 1)) break;
+		if (i == primes_sz - 1) {
+			printf("Did not find e to satisfy conditions\n");
+			abort();
+		}
+	}
 	return e;
 }
 
@@ -190,15 +198,7 @@ rsa_keygen(void)
 	fi_n = (p-1)*(q-1);
 
 	/* Choose e */
-	primes = sieve_of_eratosthenes(fi_n, &primes_sz);
-	for (int i = 0; i < primes_sz; ++i) {
-		e = primes[i];
-		if ((e % fi_n != 0) && (gcd(e,fi_n) == 1)) break;
-		if (i == primes_sz - 1) {
-			printf("Did not find e to satisfy conditions\n");
-			abort();
-		}
-	}
+	e = choose_e(fi_n);
 
 	/* Calcute modular inverse of (e,fi_n) */
 	d = mod_inverse(e,fi_n);
@@ -211,7 +211,6 @@ rsa_keygen(void)
 		abort();
 	}
 
-	printf("%lu\n", n);
 	/* Write numbers to file */
     fwrite(&n, sizeof(char), sizeof(size_t), fp);
     fwrite(&e, sizeof(char), sizeof(size_t), fp);
@@ -234,6 +233,20 @@ rsa_keygen(void)
 	return;
 }
 
+size_t
+mod_exp(size_t m, size_t e, size_t n) {
+
+	size_t res = 1;
+	m = m % n;
+	if (m == 0) return 0;
+	while(e > 0) {
+		if (e%2) res = (res*m) % n;
+		e = e/2;
+		m = (size_t)pow(m,2) % n;
+	}
+
+	return res;
+}
 
 /*
  * Encrypts an input file and dumps the ciphertext into an output file
@@ -266,6 +279,11 @@ rsa_encrypt(char *input_file, char *output_file, char *key_file)
 	fseek(fp, 0, SEEK_SET);
 
 	plaintext = malloc(sizeof(char) * len);
+	if (plaintext == NULL) {
+		printf("No memory to allocate\n");
+		abort();	
+	}
+
 	fread(plaintext, 1, len, fp);
 	fclose(fp);
 
@@ -286,12 +304,39 @@ rsa_encrypt(char *input_file, char *output_file, char *key_file)
 	/* Read e */
 	fread(key, sizeof(char), sizeof(size_t), fp);
 	size_t e = bytesToSize_t(key, sizeof(size_t));
-
-
 	fclose(fp);
+
+	/* Encrypt as m^e */
+	ciphertext = malloc(len * sizeof(size_t));
+	if (ciphertext == NULL) {
+		printf("No memory to allocate\n");
+		free(plaintext);
+		free(key);
+		abort();
+	}
+
+	/* Encrypt each byte */
+	fp = fopen(output_file, "w+");
+	if (fp == NULL) {
+		printf("Error opening file...\n");
+		free(plaintext);
+		free(key);
+		abort();
+	}
+
+	size_t ct;
+	for (int i = 0; i < len; ++i) {
+		ct = mod_exp(plaintext[i], e, n);
+		fwrite(&ct, sizeof(char), sizeof(size_t), fp);
+		// ciphertext[i] = mod_exp(plaintext[i], e, n);
+	}
+	fclose(fp);
+	// print_hex(ciphertext, len*8);
+
 	/* Clean up */
 	free(key);
 	free(plaintext);
+	free(ciphertext);
 	printf("Text encrypted successfully!\n");
 	return;
 }
@@ -308,6 +353,5 @@ void
 rsa_decrypt(char *input_file, char *output_file, char *key_file)
 {
 
-	/* TODO */
 
 }
