@@ -4,7 +4,7 @@
 
 
 /*
- * Big-Endian system
+ * Little endian system
  * Converts bytes to size_t type
  * @param {unsigned char*} bytes Sequence of bytes
  * @param {int} size Length of sequence
@@ -13,16 +13,25 @@
 size_t
 bytesToSize_t(unsigned char* bytes, int size)
 {
-	unsigned char tmp[sizeof(size_t)];
+	int num = 1;
 	size_t result;
+
+	/* Check endianess */
+	// if (*(char *)&num == 1) {
+	//     printf("Little-Endian\n");
+	// }
+	// else {
+	//     printf("Big-Endian\n");
+	// }
+	/* Function can be implemented for both endianness */
+	/*unsigned char tmp[sizeof(size_t)];
 	int k = size-1;
 
-	/* Can be skipped for Little Endian system */
 	for (int i = 0; i < sizeof(size_t); ++i) {
 		tmp[i] = bytes[k];
 		k--;
 	}
-	
+	*/
 	result = bytes[0] + (bytes[1] << 8) + (bytes[2] << 16) + (bytes[3] << 24) + (bytes[4] << 32) + (bytes[5] << 40) + (bytes[6] << 48) + (bytes[7] << 56);
 	return result;
 }
@@ -53,7 +62,7 @@ sieve_of_eratosthenes(int limit, int *primes_sz)
 	sieve_array[0] = 0;
 	sieve_array[1] = 0;
 
-	/* Mark all multiples of 2 as not prime */
+	/* Mark all multiples of p as not prime till p^2 > limit */
 	p = 2;
 	while (pow(p,2) < limit) {
 
@@ -76,11 +85,9 @@ sieve_of_eratosthenes(int limit, int *primes_sz)
 	for (int i = 0; i < limit; ++i) {
 		if (sieve_array[i] == 1) {
 			primes[k] = i;
-			// printf("%zu\n", primes[k]);
 			k++;
 		}
 	}
-
 
 	*primes_sz = k;
 
@@ -260,7 +267,6 @@ rsa_encrypt(char *input_file, char *output_file, char *key_file)
 {
 
 	unsigned char* plaintext = NULL;
-	unsigned char* ciphertext = NULL;
 	unsigned char* key = NULL;
 
 	int len = 0;
@@ -306,16 +312,7 @@ rsa_encrypt(char *input_file, char *output_file, char *key_file)
 	size_t e = bytesToSize_t(key, sizeof(size_t));
 	fclose(fp);
 
-	/* Encrypt as m^e */
-	ciphertext = malloc(len * sizeof(size_t));
-	if (ciphertext == NULL) {
-		printf("No memory to allocate\n");
-		free(plaintext);
-		free(key);
-		abort();
-	}
-
-	/* Encrypt each byte */
+	/* Open output file */
 	fp = fopen(output_file, "w+");
 	if (fp == NULL) {
 		printf("Error opening file...\n");
@@ -324,20 +321,20 @@ rsa_encrypt(char *input_file, char *output_file, char *key_file)
 		abort();
 	}
 
+	/* Encrypt each byte */
 	size_t ct;
 	for (int i = 0; i < len; ++i) {
 		ct = mod_exp(plaintext[i], e, n);
+		printf("%x\n", ct);
 		fwrite(&ct, sizeof(char), sizeof(size_t), fp);
-		// ciphertext[i] = mod_exp(plaintext[i], e, n);
 	}
 	fclose(fp);
-	// print_hex(ciphertext, len*8);
 
 	/* Clean up */
 	free(key);
 	free(plaintext);
-	free(ciphertext);
 	printf("Text encrypted successfully!\n");
+	
 	return;
 }
 
@@ -352,6 +349,89 @@ rsa_encrypt(char *input_file, char *output_file, char *key_file)
 void
 rsa_decrypt(char *input_file, char *output_file, char *key_file)
 {
+	unsigned char* extended_ciphertext = NULL;
+	unsigned char* key = NULL;
 
+	int len = 0;
+	FILE *fp;
+	
+	/* Read input file */
+	fp = fopen(input_file, "r");
+	if (fp == NULL) {
+		printf("Error writing file...\n");
+		abort();
+	}
 
+	/* Get length of plaintext */
+	fseek(fp, 0, SEEK_END);
+	len = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+
+	extended_ciphertext = malloc(sizeof(size_t));
+	if (extended_ciphertext == NULL) {
+		printf("No memory to allocate\n");
+		free(extended_ciphertext);
+		abort();	
+	}
+
+	/*
+	 * Read each size_t number from file 
+	 * Convert it to size_t and store 
+	 * it on ciphertext array  
+	 */
+	int ct_size = len/8;
+	size_t ct;
+	size_t *ciphertext = malloc(ct_size * sizeof(size_t));
+	for (int i = 0; i < ct_size; ++i) {
+		fread(extended_ciphertext, 1, sizeof(size_t), fp);
+		ct = bytesToSize_t(extended_ciphertext, sizeof(size_t));
+		ciphertext[i] = ct;
+	}	
+	fclose(fp);
+
+	/* Read Key file */
+	fp = fopen(key_file, "r");
+	if (fp == NULL) {
+		printf("Error writing file...\n");
+		abort();
+	}
+
+	/* Allocate mem for split key (8 bytes) */
+	key = malloc(sizeof(size_t));
+
+	/* Read n */
+	fread(key, sizeof(char), sizeof(size_t), fp);
+	size_t n = bytesToSize_t(key, sizeof(size_t));
+	
+	/* Read e */
+	fread(key, sizeof(char), sizeof(size_t), fp);
+	size_t d = bytesToSize_t(key, sizeof(size_t));
+	fclose(fp);
+
+	/* Open output file */
+	fp = fopen(output_file, "w+");
+	if (fp == NULL) {
+		printf("Error opening file...\n");
+		free(ciphertext);
+		free(key);
+		abort();
+	}
+
+	/* Decrypt each byte */
+	char pt;
+	unsigned char plaintext[ct_size]; 
+	for (int i = 0; i < ct_size; ++i) {
+		pt = (char)	mod_exp(ciphertext[i], d, n);
+		plaintext[i] = pt;
+	}
+
+	fwrite(plaintext, sizeof(char), ct_size, fp);
+	fclose(fp);
+
+	/* Clean up */
+	free(key);
+	free(ciphertext);
+	printf("Text decrypted successfully!\n");
+	
+	return;
 }
