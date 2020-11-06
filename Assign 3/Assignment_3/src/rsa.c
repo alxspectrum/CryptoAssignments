@@ -8,7 +8,7 @@
  * Converts bytes to size_t type
  * @param {unsigned char*} bytes Sequence of bytes
  * @param {int} size Length of sequence
- * @returns {size_t} The bytes converted to size_t number
+ * @returns {size_t} result The bytes converted to size_t number
  */
 size_t
 bytesToSize_t(unsigned char* bytes, int size)
@@ -132,7 +132,6 @@ choose_e(size_t fi_n)
 	size_t e;
 	int primes_sz;
 	size_t	*primes = sieve_of_eratosthenes(fi_n, &primes_sz);
-
 	for (int i = 0; i < primes_sz; ++i) {
 		e = primes[i];
 		if ((e % fi_n != 0) && (gcd(e,fi_n) == 1)) break;
@@ -240,6 +239,14 @@ rsa_keygen(void)
 	return;
 }
 
+/*
+ * Modular exponentiation
+ *
+ * @param {size_t} m 
+ * @param {size_t} e
+ * @param {size_t} n
+ * @returns {size_t} res
+ */
 size_t
 mod_exp(size_t m, size_t e, size_t n) {
 
@@ -306,7 +313,7 @@ rsa_encrypt(char *input_file, char *output_file, char *key_file)
 	/* Read n */
 	fread(key, sizeof(char), sizeof(size_t), fp);
 	size_t n = bytesToSize_t(key, sizeof(size_t));
-	
+		
 	/* Read e */
 	fread(key, sizeof(char), sizeof(size_t), fp);
 	size_t e = bytesToSize_t(key, sizeof(size_t));
@@ -325,7 +332,6 @@ rsa_encrypt(char *input_file, char *output_file, char *key_file)
 	size_t ct;
 	for (int i = 0; i < len; ++i) {
 		ct = mod_exp(plaintext[i], e, n);
-		printf("%x\n", ct);
 		fwrite(&ct, sizeof(char), sizeof(size_t), fp);
 	}
 	fclose(fp);
