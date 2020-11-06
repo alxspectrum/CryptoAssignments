@@ -1,8 +1,6 @@
 #include "rsa.h"
 #include "utils.h"
 
-
-
 /*
  * Little endian system
  * Converts bytes to size_t type
