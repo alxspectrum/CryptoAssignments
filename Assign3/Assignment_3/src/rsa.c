@@ -256,7 +256,6 @@ mod_exp(size_t m, size_t e, size_t n) {
 		e = e/2;
 		m = (size_t)pow(m,2) % n;
 	}
-
 	return res;
 }
 
@@ -390,7 +389,7 @@ rsa_decrypt(char *input_file, char *output_file, char *key_file)
 		fread(extended_ciphertext, 1, sizeof(size_t), fp);
 		ct = bytesToSize_t(extended_ciphertext, sizeof(size_t));
 		ciphertext[i] = ct;
-	}	
+	}
 	fclose(fp);
 
 	/* Read Key file */

@@ -254,10 +254,8 @@ void printAlg(char* algo) {
 
 	printf("\n[%s] input: ", algo);
 	fgets(input, MAX_INPUT_SIZE*10, stdin);
-	// input[strlen(input)] = '\0';
 	plainText = cleanText(input);
 	textSize = strlen((char*)plainText);
-	// plainText[textSize] = '\0';
 
 	/* KEY SECTION */
 	if ( strcmp(algo, "Caesars") == 0 ) {

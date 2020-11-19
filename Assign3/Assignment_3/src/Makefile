@@ -6,7 +6,7 @@ OBJFILES = main.o rsa.o utils.o
 AM = 2013030068
 TARGET = assign_3
 
-all: $(TARGET) keygen encryptpub encryptpriv decryptpub decryptpriv 
+all: $(TARGET) keygen encryptpub encryptpriv decryptpub decryptpriv
 
 $(TARGET): $(OBJFILES)
 	$(CC) $(CFLAGS) $(DBG) -o $(TARGET) $(OBJFILES) -lm	
@@ -29,7 +29,7 @@ decryptpriv:
 
 # TEST
 enctest:
-	./${TARGET} -i ../files/test.txt -k ../files/private.key -o ../files/enctest.txt -e 
+	./${TARGET} -i ../files/hpy414_encryptme_pub.txt -k ../files/private.key -o ../files/enctest.txt -e 
 
 dectest:
 	./${TARGET} -i ../files/enctest.txt -k ../files/public.key -o ../files/dectest.txt -d 
