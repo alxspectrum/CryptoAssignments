@@ -13,6 +13,7 @@ been tested on many different scenarios and security vulnerabilities.
 ### Implementation 
 
 ##### Log
+```bash
 Each entry in the log file is in the following format:
 UID: user id
 Filename: absolute path of file 
@@ -21,6 +22,7 @@ Timestamp: hr/min/sec
 Accesstype: {0, 1, 2}
 IsActionDeniedFlag: {0, 1}
 FileFingerprint: 16 byte MD5 hash
+```
 
 ##### Monitor
 ```bash
