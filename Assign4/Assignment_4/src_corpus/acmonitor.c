@@ -35,7 +35,7 @@ usage(void)
 	printf(
 	       "\n"
 	       "usage:\n"
-	       "\t./monitor \n"
+	       "\t./acmonitor \n"
 		   "Options:\n"
 		   "-m, Prints malicious users\n"
 		   "-i <filename>, Prints table of users that modified "
@@ -177,6 +177,10 @@ void
 list_unauthorized_accesses(FILE *log)
 {	
 	printf("!Malicious Users!\n");
+	if (num_of_users == 0) {
+		printf("No malicious users found\n");
+		return;
+	}
 	for (int i = 0; i < num_of_users; ++i) {
 		if (users[i].accessno >= 7) {
 			printf("Malicious UID: %d\n", users[i].uid);
@@ -190,6 +194,11 @@ void
 list_file_modifications(FILE *log, char *file_to_scan)
 {
 	char *filepath = realpath(file_to_scan, NULL);
+	if (filepath == NULL) {
+		printf("File does not exist\n");
+		return;
+	}
+	printf("%s\n", filepath);
 
 	int userMods[MAX_USERS];
 	int mods = 0; 
@@ -225,7 +234,7 @@ main(int argc, char *argv[])
 	}
 
 	log_users(log);
-	while ((ch = getopt(argc, argv, "hi:m:a")) != -1) {
+	while ((ch = getopt(argc, argv, "hi:ma")) != -1) {
 		switch (ch) {		
 		case 'i':
 			list_file_modifications(log, optarg);
@@ -244,7 +253,7 @@ main(int argc, char *argv[])
 
 
 
-
+	printf("\n");
 
 	fclose(log);
 	argc -= optind;

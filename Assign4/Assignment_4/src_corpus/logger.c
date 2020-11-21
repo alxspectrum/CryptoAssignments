@@ -7,8 +7,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <openssl/md5.h>
 #include <fcntl.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define FILE_CREATE 0
 #define FILE_READ 1
@@ -43,7 +47,9 @@ print_hex(unsigned char *data, size_t len)
 	}
 }
 
-
+/**
+ * Entry struct
+ */
 typedef struct entry {
 
 	int uid; /* user id (positive integer) */
@@ -68,8 +74,7 @@ typedef struct entry {
  */
 char *
 find_filename(FILE *fp){
-	int MAXSIZE = 0xFFF;
-    char proclnk[MAXSIZE];
+    char proclnk[MAX_SIZE];
     char *filename = malloc(sizeof(char) * 255);
     int fno;
     ssize_t r;
@@ -77,11 +82,8 @@ find_filename(FILE *fp){
     if (fp != NULL) {
         fno = fileno(fp);
         sprintf(proclnk, "/proc/self/fd/%d", fno);
-        r = readlink(proclnk, filename, MAXSIZE);
-        if (r < 0) {
-            printf("failed to readlink\n");
-            exit(1);
-        }
+        r = readlink(proclnk, filename, MAX_SIZE);
+        if (r < 0) return "Could not fetch filename";
         
         filename[r] = '\0';
     }
@@ -173,28 +175,78 @@ hash_contents(char *path, void *ptr) {
 	return fingerprint;
 }
 
+/**
+ * Get absolute path of relative path
+ *
+ */
+char *
+get_abs_path(char *path, int access_type) {
+	char buf[MAX_SIZE];
+	char *result = malloc(sizeof(char) * MAX_SIZE);
+	if (result == NULL) ExitError("No memory");
+	char *tmp = malloc(sizeof(char) * MAX_SIZE);
+	if (tmp == NULL) ExitError("No Memory");
+
+	memset(result, '\0', MAX_SIZE);
+	memset(tmp, '\0', MAX_SIZE);
+	memset(buf, '\0', MAX_SIZE);
+
+	if (access_type != 0) {
+		result = realpath(path, buf);
+	}
+	else {
+		if (path[0] == '.' && path[1] == '/') path += 2;
+		if (path[0] == '/') {
+			for (int i = strlen(path) - 1; i > -1; i--) {
+				if (path[i] == '/') {
+					strncpy(tmp, path, i + 1);
+					tmp[strlen(path)] = '\0';
+					if ((realpath(tmp, buf)) != NULL) {
+						result = realpath(tmp, buf);
+						strncpy(tmp, path + i, strlen(path) - i);
+						tmp[strlen(path) - i] = '\0';
+						i = -1;
+					}
+				}
+			}
+			strncat(result, tmp, strlen(tmp));
+		}
+		else if (path[0] != '/') {
+			result = realpath("./", buf);
+			result[strlen(result)] = '/';
+			strncat(result, path, strlen(path));
+		}
+	}
+
+	free(tmp);
+	return result;
+}
+
 /* Check file open mode and user permission */
 int*
 get_access_type(const char *path, const char *mode)
 {	
 	static int result[2];
+	result[0] = -1;
+	result[1] = -1;
 
 	/* File Creation */
 	if (!strcmp(mode, "w") || !strcmp(mode, "w+") 
-		|| !strcmp(mode, "a") || !strcmp(mode, "a+")){
+		|| !strcmp(mode, "a") || !strcmp(mode, "a+")
+		|| !strcmp(mode, "r+")){
 		result[0] = (access(path, F_OK) == -1) ? FILE_CREATE:FILE_WRITE;
 		result[1] = (access(path, W_OK) == -1) ? 1:0;
+		if (result[0] == FILE_CREATE) result[1]  = 0;
 	}
 
 	/* File Read */
-	if (!strcmp(mode, "r") || !strcmp(mode, "r+")){
+	if (!strcmp(mode, "r")){
 		result[0] = FILE_READ;
 		result[1] = (access(path, R_OK) == -1) ? 1:0;
 	}
 
 	return result;
 }
-
 
 /**
  * Create the log message to
@@ -203,41 +255,38 @@ get_access_type(const char *path, const char *mode)
 char*
 create_log(struct entry e) {
 	char *logResult = malloc(MAX_SIZE * sizeof(char));
-
 	if (logResult == NULL) ExitError("No memory");
+	memset(logResult, '\0', MAX_SIZE);
 
-	char buf[MAX_SIZE];
+	char *buf = malloc(MAX_SIZE * sizeof(char));
+	if (buf == NULL) ExitError("No memory");
+	memset(buf, '\0', MAX_SIZE);
+
 	strcpy(logResult, "UID: ");
-	snprintf(buf, sizeof(buf), "%d", e.uid);
+	snprintf(buf, MAX_SIZE, "%d", e.uid);
 	strcat(logResult, buf);
 	strcat(logResult, "\nFilename: ");
-	if (e.access_type != 0) {
-		strcat(logResult, realpath(e.file, buf));
-	}
-	else {
-		strcat(logResult, realpath(".", buf));
-		snprintf(buf, sizeof(buf), "/%s", e.file);
-		strcat(logResult, buf);
-	}
+	strcat(logResult, e.file);
 	strcat(logResult, "\nDate: ");
-	snprintf(buf, sizeof(buf), "%d", (int)(e.date));
+	snprintf(buf, MAX_SIZE, "%d", (int)(e.date));
   	struct tm tm = *localtime((const time_t*)(&e.date));
-	snprintf(buf, sizeof(buf), "%d %d %d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
+	snprintf(buf, MAX_SIZE, "%d/%d/%d", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900);
 	strcat(logResult, buf);
 	strcat(logResult, "\nTimestamp: ");
-	snprintf(buf, sizeof(buf), "%02d:%02d:%0d", tm.tm_hour, tm.tm_min, tm.tm_sec);
+	snprintf(buf, MAX_SIZE, "%02d:%02d:%0d", tm.tm_hour, tm.tm_min, tm.tm_sec);
 	strcat(logResult, buf);
 	strcat(logResult, "\nAccesstype: ");
-	snprintf(buf, sizeof(buf), "%d", e.access_type);
+	snprintf(buf, MAX_SIZE, "%d", e.access_type);
 	strcat(logResult, buf);
 	strcat(logResult, "\nIsActionDeniedFlag: ");
-	snprintf(buf, sizeof(buf), "%d", e.action_denied);
+	snprintf(buf, MAX_SIZE, "%d", e.action_denied);
 	strcat(logResult, buf);
 	strcat(logResult, "\nFileFingerprint: ");
-	snprintf(buf, sizeof(buf), "%s", bytesToString(e.fingerprint, MD5_DIGEST_LENGTH));
+	snprintf(buf, MAX_SIZE, "%s", bytesToString(e.fingerprint, MD5_DIGEST_LENGTH));
 	strcat(logResult, buf);
 	strcat(logResult, "\n\n");
 
+	free(buf);
 	return logResult;
 }
 
@@ -269,29 +318,26 @@ fopen(const char *path, const char *mode)
 	}
 
   	// Store all args to struct
-	entry *e = malloc(sizeof(struct entry));
+	entry *e = malloc(sizeof(struct entry) * 10);
 	if (e == NULL) ExitError("No memory");
   	e->uid = uid;
   	e->access_type = access_type;
   	e->action_denied = action_denied;
   	e->date = t;
   	e->time = t;
-  	e->file = (char*)path;
+  	e->file = get_abs_path((char*)path, access_type);
   	e->fingerprint = fingerprint;
-  	seteuid(1000);
+
+  	// Open log
 	FILE *log = original_fopen("./file_logging.log", "a");
+	if (log == NULL) ExitError("failed to open logging file at read");
 
   	// Create log from struct fields
   	char *logResult = NULL;
   	logResult = create_log(*e);
-	original_fwrite(logResult, sizeof(char), strlen(logResult), log);
 
   	// Append log to logger
-	if (log == NULL) {
-		printf("fopen error\n");
-		// exit(EXIT_FAILURE);
-		return NULL;	
-	}
+	original_fwrite(logResult, sizeof(char), strlen(logResult), log);
 	
 	// Clean up
 	fclose(log);
@@ -328,7 +374,7 @@ get_mode_of_fd(FILE *stream)
 			return "a+";
 	}
 	
-	return "Non supporting file mode";
+	return "Non supported file mode";
 }
 
 /**
@@ -414,10 +460,7 @@ fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 
   	// Append log to logger
 	FILE *log = original_fopen("./file_logging.log", "a+");
-	if (log == NULL) {
-		printf("fopen error\n");
-		exit(EXIT_FAILURE);
-	}
+	if (log == NULL) ExitError("failed to open logging file at write");
 	original_fwrite(logResult, sizeof(char), strlen(logResult), log);
 	
 	// Clean up
