@@ -12,8 +12,11 @@ int main()
 			"file_5", "file_6", "file_7", 		
 			"file_8", "file_9"};
 
-	/* example source code */
 
+	unsigned char *msg = "a";
+	char *nopermfile = "noperm";
+
+	// Create
 	for (i = 0; i < 10; i++) {
 
 		file = fopen(filenames[i], "w");
@@ -26,9 +29,6 @@ int main()
 		}
 
 	}
-
-	unsigned char *msg = "a";
-	char *nopermfile = "noperm";
 
 	// Should deny 20 times for UID 1000
 	// Should modify 41 times file_0 UID 1000
@@ -68,6 +68,13 @@ int main()
 
 		// Modify 
 		file = fopen(filenames[2], "a");
+		if (file != NULL){
+			for (int i = 0; i < 5; ++i) fwrite(msg, strlen(msg), 1, file);	
+			fclose(file);
+		}
+
+		// Read
+		file = fopen(filenames[2], "r");
 		if (file != NULL){
 			for (int i = 0; i < 5; ++i) fwrite(msg, strlen(msg), 1, file);	
 			fclose(file);
