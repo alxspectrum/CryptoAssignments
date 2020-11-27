@@ -2,8 +2,11 @@
 #include <string.h>
 #include <unistd.h>
 
+
 int main(int argc, char* argv[]) 
 {
+
+	printf("%d\n", __linux);
 	FILE *fp = NULL;
 	if (argc < 2) {
 		printf("Did not pass any files\n");

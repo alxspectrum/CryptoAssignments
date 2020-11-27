@@ -13,7 +13,8 @@
 #define TIME_PASSED 1200
 
 /**
- * Keep user record with number of accesses
+ * Keep user record file accesses
+ * and denies
  *
  */
 struct User {
@@ -26,9 +27,14 @@ struct User {
 
 };
 
+/**
+ * Keep file record with timestamp
+ *
+ */
 struct File {
 	char filename[MAX_STR_LEN];
 	time_t unixtime;
+	int encrypted;
 };
 
 // Create global arrays
@@ -83,9 +89,9 @@ print_stats() {
 void
 print_created_files() {
 	for (int i = 0; i < num_of_files; ++i) {
-		printf("Name: %s\n", files[i].filename);
-		// printf("Date: %s\n", ctime(&(files[i].unixtime)));
-		printf("%ld\n", files[i].unixtime);
+		// printf("Name: %s\n", files[i].filename);
+		// printf("Unix time: %ld\n", files[i].unixtime);
+		printf("Encrypted: %d\n", files[i].encrypted);
 	}
 }
 
@@ -148,6 +154,7 @@ log_users(FILE *log)
 	int file_index_on_file = 0;
 	int access_type = 0;
 	struct tm tm = {};
+	char *enc = ".encrypt";
 
 	while ((read = getline(&line, &len, log)) != -1) {
 
@@ -190,8 +197,13 @@ log_users(FILE *log)
 			if (file_index_on_file == -1) {
 				memset(files[num_of_files].filename, '\0', MAX_STR_LEN);
 				strncpy(files[num_of_files].filename, value, strlen(value));
+				files[num_of_files].encrypted = 0;
+
+				if (strncmp(value + strlen(value) - strlen(enc), enc, strlen(enc)) == 0) {
+					files[num_of_files].encrypted = 1;
+				}
+				file_index_on_file = num_of_files;
 				num_of_files++;
-				file_index_on_file = num_of_files - 1;
 			}
 		}
 
@@ -306,9 +318,25 @@ list_file_modifications(FILE *log, char *file_to_scan)
 }
 
 void
+list_encrypted_files()
+{
+	char *enc = ".encrypt";
+	// print_created_files();
+	for (int i = 0; i < num_of_files; ++i) {
+		if (files[i].encrypted == 1) {
+			for (int j = 0; j < num_of_files; ++j) {
+				if ((strncmp(files[i].filename, files[j].filename, strlen(files[j].filename)) == 0) 
+					&& (files[j].encrypted == 0)){
+					printf("%s\n", files[i].filename);
+				}
+			}
+		}
+	}
+}
+
+void
 list_files_created(int filenum)
 {
-	// print_created_files();
 	int num = 0;
 	time_t now = time(NULL);
 
@@ -353,7 +381,7 @@ main(int argc, char *argv[])
 			list_files_created(filenum);
 			break;
 		case 'e':
-			// 
+			list_encrypted_files(); 
 			break;
 		case 'a':
 			print_stats();

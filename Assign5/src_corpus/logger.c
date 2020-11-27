@@ -294,6 +294,7 @@ FILE *
 fopen(const char *path, const char *mode) 
 {
 
+	fprintf(stdout, "inside fopen%d\n", __LINE__);
 	/* Declare original open */
 	FILE *original_fopen_ret;
 	FILE *(*original_fopen)(const char*, const char*);

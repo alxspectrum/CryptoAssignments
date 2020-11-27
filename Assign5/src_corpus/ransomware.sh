@@ -43,21 +43,23 @@ done
 # Encrypt file 
 # Pass encrypted text to logger 
 # Delete original file 
-for file in $files; do
-	pass="$(openssl enc -a -md $DIGEST $CIPHER -iter $ITER -in "$DIR/$file" -pbkdf2 -k $AM)"
-	pass="$pass"$'\n'
-	LD_PRELOAD=./logger.so ./test_aclog "$file".encrypt "$pass"	
-	res=$?	
-	verifyResult $res
-	rm $DIR/$file
-done
-sleep 1
+# for file in $files; do
+# 	pass="$(openssl enc -a -md $DIGEST $CIPHER -iter $ITER -in "$DIR/$file" -pbkdf2 -k $AM)"
+# 	pass="$pass"$'\n'
+# 	LD_PRELOAD=./logger.so ./test_aclog "$file".encrypt "$pass"	
+# 	res=$?	
+# 	verifyResult $res
+# 	rm $DIR/$file
+# done
+# sleep 1
 
-# Decrypt
-for file in $files; do
-	plaintext="$(openssl enc -a -d -md $DIGEST $CIPHER -iter $ITER -in "$DIR/$file".encrypt -pbkdf2 -k $AM)"
-	# echo "$plaintext"
-done
+# # Decrypt
+# for file in $files; do
+# 	plaintext="$(openssl enc -a -d -md $DIGEST $CIPHER -iter $ITER -in "$DIR/$file".encrypt -pbkdf2 -k $AM)"
+# 	# echo "$plaintext"
+# done
+set -x
+LD_PRELOAD=./logger.so openssl enc -a -md $DIGEST $CIPHER -iter $ITER -in encfile_0 -out ${PWD}/file.encrypt -pbkdf2 -k $AM
 
 
 
