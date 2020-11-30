@@ -340,7 +340,6 @@ list_files_created(int filenum)
 	int num = 0;
 	time_t now = time(NULL);
 
-	printf("%d\n", num_of_files);
 	for (int i = 0; (i < num_of_files && i < filenum); ++i) {
 		if (now - files[i].unixtime < TIME_PASSED) num++;
 	}
