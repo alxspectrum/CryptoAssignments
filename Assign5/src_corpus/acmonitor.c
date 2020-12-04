@@ -321,7 +321,6 @@ void
 list_encrypted_files()
 {
 	char *enc = ".encrypt";
-	// print_created_files();
 	for (int i = 0; i < num_of_files; ++i) {
 		if (files[i].encrypted == 1) {
 			for (int j = 0; j < num_of_files; ++j) {
@@ -340,11 +339,12 @@ list_files_created(int filenum)
 	int num = 0;
 	time_t now = time(NULL);
 
-	for (int i = 0; (i < num_of_files && i < filenum); ++i) {
+	for (int i = 0; (i < num_of_files); ++i) {
 		if (now - files[i].unixtime < TIME_PASSED) num++;
 	}
 
 	printf("Total files created in the last %d minutes: %d\n", TIME_PASSED/60, num);
+	if (num >= filenum) printf("!!Suspicious behavior!!\n");
 	return;
 }
 

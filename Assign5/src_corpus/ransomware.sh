@@ -7,10 +7,20 @@
 # Verify result funtion
 verifyResult() {
 	if [ $1 -ne 0 ]; then
-		echo "Error..."
+		echo "Error: $2"
 		exit 1
 	fi
 }
+
+if [ -z "$1" ]; then
+	echo "Error: missing directory"
+	exit 1
+fi
+
+if [ -z "$2" ]; then
+	echo "Error: missing number of files"
+	exit 1
+fi
 
 # Args
 DIR=$1
@@ -32,12 +42,29 @@ if [ "$2" == "clean" ]; then
 	exit 0
 fi
 
-# Create files in DIRectory
+# Decrypt
+if [ "$2" == "dec" ]; then
+	files="$(find "$DIR" -type f -name "*.encrypt")"
+	if [ -z "$files" ]; then
+		echo "No files found"
+		exit 0
+	fi
+	for file in $files; do
+		plaintext="$(openssl enc -a -d -md $DIGEST $CIPHER -iter $ITER -in "$DIR/$file" -pbkdf2 -k $AM)"
+		file=${file%".encrypt"}
+		LD_PRELOAD=./logger.so ./test_aclog "$file".decrypt "$plaintext"	
+	done
+	exit 0	
+fi
+
+
+
+# Create files in given directory
 while [ $COUNT -lt $MAX_FILES ]; do
 	val=encfile_"$COUNT"
 	LD_PRELOAD=./logger.so ./test_aclog $val $val
 	res=$?
-	verifyResult $res
+	verifyResult $res "test_aclog failed to create files"
 	files+="encfile_${COUNT} " 
 	COUNT="$(expr $COUNT + 1)"
 done
@@ -48,22 +75,14 @@ done
 for file in $files; do
 	pass="$(openssl enc -a -md $DIGEST $CIPHER -iter $ITER -in "$DIR/$file" -pbkdf2 -k $AM)"
 	pass="$pass"$'\n'
-	echo $pass
 	LD_PRELOAD=./logger.so ./test_aclog "$file".encrypt "$pass"	
 	res=$?	
-	verifyResult $res
+	verifyResult $res "test_aclog failed to create encrypted files"
 	rm $DIR/$file
 done
 sleep 1
 
-# # Decrypt
-# for file in $files; do
-# 	plaintext="$(openssl enc -a -d -md $DIGEST $CIPHER -iter $ITER -in "$DIR/$file".encrypt -pbkdf2 -k $AM)"
-# 	# echo "$plaintext"
-# done
-# set -x
-# LD_PRELOAD=./logger.so openssl enc -a -md $DIGEST $CIPHER -iter $ITER -in encfile_0 -out ${PWD}/file.encrypt -pbkdf2 -k $AM
-
+exit 0
 
 
 
