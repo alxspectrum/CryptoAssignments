@@ -1,6 +1,5 @@
 ## DNS Blocking using iptables
 
-AM 2013030068
 ### Description
 
 This bash script provides functionality over rejecting traffic from websites using either IP or DNS.
