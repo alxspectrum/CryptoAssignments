@@ -7,3 +7,4 @@
 ### Assign 5 - Use the access control logging tool to detect the basic ransomware you developed.
 ### Assign 6 - Network traffic monitoring using the Packet Capture library
 ### Assign 7 - Block IPs with iptables
+### Assign 8 - Buffer Overflow Exploitation
